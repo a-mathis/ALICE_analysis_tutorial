@@ -35,15 +35,36 @@ using namespace std;            // std namespace: so you can do things like 'cou
 ClassImp(AliAnalysisTaskMyTask) // classimp: necessary for root
 
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask() : AliAnalysisTaskSE(), 
-    fAOD(0), fOutputList(0), fHistPt(0)
+    fAOD(0),
+    fOutputList(0),
+    fHistTPConly(0),
+    fHistFB0(0),
+    fHistFB1(0),
+    fHistFB2(0),
+    fHistFB4(0),
+    fHistFB5(0),
+    fHistFB6(0),
+    fHistFB7(0),
+    fHistFB8(0),
+    fHistPt(0)
 {
     // default constructor, don't allocate memory here!
     // this is used by root for IO purposes, it needs to remain empty
 }
 //_____________________________________________________________________________
 AliAnalysisTaskMyTask::AliAnalysisTaskMyTask(const char* name) : AliAnalysisTaskSE(name),
-    fAOD(0), fOutputList(0), fHistPt(0)
-{
+  fAOD(0),
+  fOutputList(0),
+  fHistTPConly(0),
+  fHistFB0(0),
+  fHistFB1(0),
+  fHistFB2(0),
+  fHistFB4(0),
+  fHistFB5(0),
+  fHistFB6(0),
+  fHistFB7(0),
+  fHistFB8(0),
+  fHistPt(0){
     // constructor
     DefineInput(0, TChain::Class());    // define the input of the analysis: in this case we take a 'chain' of events
                                         // this chain is created by the analysis manager, so no need to worry about it, 
@@ -83,6 +104,26 @@ void AliAnalysisTaskMyTask::UserCreateOutputObjects()
     fOutputList->Add(fHistPt);          // don't forget to add it to the list! the list will be written to file, so if you want
                                         // your histogram in the output file, add it to the list!
     
+
+    fHistTPConly = new TH1F("fHistTPConly", "fHistTPConly", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistTPConly);
+    fHistFB0 = new TH1F("fHistFB0", "fHistFB0", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistFB0);
+    fHistFB1 = new TH1F("fHistFB1", "fHistFB1", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistFB1);
+    fHistFB2 = new TH1F("fHistFB2", "fHistFB2", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistFB2);
+    fHistFB4 = new TH1F("fHistFB4", "fHistFB4", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistFB4);
+    fHistFB5 = new TH1F("fHistFB5", "fHistFB5", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistFB5);
+    fHistFB6 = new TH1F("fHistFB6", "fHistFB6", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistFB6);
+    fHistFB7 = new TH1F("fHistFB7", "fHistFB7", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistFB7);
+    fHistFB8 = new TH1F("fHistFB8", "fHistFB8", 1000, 0, 1000);       // create your histogra
+    fOutputList->Add(fHistFB8);
+
     PostData(1, fOutputList);           // postdata will notify the analysis manager of changes / updates to the 
                                         // fOutputList object. the manager will in the end take care of writing your output to file
                                         // so it needs to know what's in the output
@@ -102,11 +143,66 @@ void AliAnalysisTaskMyTask::UserExec(Option_t *)
         // example part: i'll show how to loop over the tracks in an event 
         // and extract some information from them which we'll store in a histogram
     Int_t iTracks(fAOD->GetNumberOfTracks());           // see how many tracks there are in the event
+
+
+    int nTracksFB0 = 0;
+    int nTracksFB1 = 0;
+    int nTracksFB2 = 0;
+    int nTracksFB4 = 0;
+    int nTracksFB5 = 0;
+    int nTracksFB6 = 0;
+    int nTracksFB7 = 0;
+    int nTracksFB8 = 0;
+    int nTracksTPConly = 0;
+
     for(Int_t i(0); i < iTracks; i++) {                 // loop ove rall these tracks
         AliAODTrack* track = static_cast<AliAODTrack*>(fAOD->GetTrack(i));         // get a track (type AliAODTrack) from the event
-        if(!track || !track->TestFilterBit(1)) continue;                            // if we failed, skip this track
+        if(!track) continue;
+
+        if (!(track->HasPointOnITSLayer(0)) && !(track->HasPointOnITSLayer(1))) continue;
+
+        if(track->TestFilterBit(0)) {
+            ++nTracksFB0;
+          }
+        if(track->TestFilterBit(1)) {
+            ++nTracksFB1;
+          }
+        if(track->TestFilterBit(2)) {
+            ++nTracksFB2;
+          }
+        if(track->TestFilterBit(4)) {
+                ++nTracksFB4;
+              }
+        if(track->TestFilterBit(5)) {
+            ++nTracksFB5;
+          }
+        if(track->TestFilterBit(6)) {
+            ++nTracksFB6;
+          }
+        if(track->TestFilterBit(7)) {
+            ++nTracksFB7;
+          }
+        if(track->TestFilterBit(8)) {
+            ++nTracksFB8;
+          }
+        if(track->TestFilterBit(128)) {
+            ++nTracksTPConly;
+          }
+
         fHistPt->Fill(track->Pt());                     // plot the pt value of the track in a histogram
     }                                                   // continue until all the tracks are processed
+
+    fHistFB0->Fill(nTracksFB0);
+    fHistFB1->Fill(nTracksFB1);
+    fHistFB2->Fill(nTracksFB2);
+    fHistFB4->Fill(nTracksFB4);
+    fHistFB5->Fill(nTracksFB5);
+    fHistFB6->Fill(nTracksFB6);
+    fHistFB7->Fill(nTracksFB7);
+    fHistFB8->Fill(nTracksFB8);
+    fHistTPConly->Fill(nTracksTPConly);
+
+
     PostData(1, fOutputList);                           // stream the results the analysis of this event to
                                                         // the output manager which will take care of writing
                                                         // it to a file

@@ -6,57 +6,36 @@
 
 void runAnalysis()
 {
-    // set if you want to run the analysis locally (kTRUE), or on grid (kFALSE)
-    Bool_t local = kTRUE;
+  gSystem->Load("libANALYSIS");
+  gSystem->Load("libANALYSISalice");
+  gSystem->Load("libANALYSISaliceBase");
+
+  // Use AliRoot includes to compile our task
+  gInterpreter->ProcessLine(".include $ALICE_ROOT/include");
+  gInterpreter->ProcessLine(".include $ALICE_PHYSICS/include");
+  gInterpreter->ProcessLine(".include $ROOTSYS/include");
+
     // if you run on grid, specify test mode (kTRUE) or full grid model (kFALSE)
     Bool_t gridTest = kTRUE;
-    
-    // since we will compile a class, tell root where to look for headers  
-#if !defined (__CINT__) || defined (__CLING__)
-    gInterpreter->ProcessLine(".include $ROOTSYS/include");
-    gInterpreter->ProcessLine(".include $ALICE_ROOT/include");
-#else
-    gROOT->ProcessLine(".include $ROOTSYS/include");
-    gROOT->ProcessLine(".include $ALICE_ROOT/include");
-#endif
-     
+
     // create the analysis manager
     AliAnalysisManager *mgr = new AliAnalysisManager("AnalysisTaskExample");
     AliAODInputHandler *aodH = new AliAODInputHandler();
     mgr->SetInputEventHandler(aodH);
 
-
-
-    // compile the class and load the add task macro
-    // here we have to differentiate between using the just-in-time compiler
-    // from root6, or the interpreter of root5
-#if !defined (__CINT__) || defined (__CLING__)
     gInterpreter->LoadMacro("AliAnalysisTaskMyTask.cxx++g");
     AliAnalysisTaskMyTask *task = reinterpret_cast<AliAnalysisTaskMyTask*>(gInterpreter->ExecuteMacro("AddMyTask.C"));
-#else
-    gROOT->LoadMacro("AliAnalysisTaskMyTask.cxx++g");
-    gROOT->LoadMacro("AddMyTask.C");
-    AliAnalysisTaskMyTask *task = AddMyTask();
-#endif
-
 
     if(!mgr->InitAnalysis()) return;
     mgr->SetDebugLevel(2);
     mgr->PrintStatus();
     mgr->SetUseProgressBar(1, 25);
 
-    if(local) {
-        // if you want to run locally, we need to define some input
-        TChain* chain = new TChain("aodTree");
-        // add a few files to the chain (change this so that your local files are added)
-        chain->Add("AliAOD.root");
-        // start the analysis locally, reading the events from the tchain
-        mgr->StartAnalysis("local", chain);
-    } else {
         // if we want to run on grid, we create and configure the plugin
         AliAnalysisAlien *alienHandler = new AliAnalysisAlien();
+        alienHandler->SetUser("amathis");
         // also specify the include (header) paths on grid
-        alienHandler->AddIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_PHYSICS/include");
+        alienHandler->AddIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_PHYSICS -I$ALICE_PHYSICS/include");
         // make sure your source files get copied to grid
         alienHandler->SetAdditionalLibs("AliAnalysisTaskMyTask.cxx AliAnalysisTaskMyTask.h");
         alienHandler->SetAnalysisSource("AliAnalysisTaskMyTask.cxx");
@@ -66,12 +45,19 @@ void runAnalysis()
         // set the Alien API version
         alienHandler->SetAPIVersion("V1.1x");
         // select the input data
-        alienHandler->SetGridDataDir("/alice/data/2015/LHC15o");
-        alienHandler->SetDataPattern("*pass1/AOD194/*AOD.root");
+        alienHandler->SetGridDataDir("/alice/data/2018/LHC18b");
+         alienHandler->SetDataPattern("/pass1/AOD/*/AliAOD.root");
         // MC has no prefix, data has prefix 000
         alienHandler->SetRunPrefix("000");
         // runnumber
-        alienHandler->AddRunNumber(246994);
+        Int_t runlist[] = {
+          285396, 285365, 285364, 285347, 285328, 285327, 285224, 285222, 285203, 285200, 285165, 285127, 285125, 285108, 285106, 285066, 285065, 285064, 285015, 285014, 285013, 285012, 285011, 285009};
+
+        for (Int_t i = 0; i < sizeof(runlist); i++) {
+            if (i == sizeof(runlist) / sizeof(runlist[1])) break;
+            alienHandler->AddRunNumber(runlist[i]);
+          }
+
         // number of files per subjob
         alienHandler->SetSplitMaxInputFileNumber(40);
         alienHandler->SetExecutable("myTask.sh");
@@ -106,4 +92,3 @@ void runAnalysis()
             mgr->StartAnalysis("grid");
         }
     }
-}
